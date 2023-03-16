@@ -35,18 +35,21 @@ async function main() {
       const html = await makeRequest(url);
       const soup = new jssoup(html);
 
+      const title = getTitle(soup);
       const phones = getPhones(soup);
       const emails = getEmails(soup);
       const address = getAddress(html);
 
       console.log(' * * * * * * * * * * * * * * * *');
       printUrl(url);
+      printTitle(title);
       printPhones(phones);
       printEmails(emails);
       printAddress(address);
 
       resultArray.push({
         url,
+        title,
         phones,
         emails,
         address,
@@ -63,10 +66,9 @@ async function main() {
   const csv = getMyTsv(resultArray);
   await writeFile(fileName, csv);
 
-  /*
   let excelArray = [];
   resultArray.forEach((element, index) => {
-    const { url, phones, emails, address } = element;
+    const { url, title, phones, emails, address } = element;
     const length = Math.max(phones.length, emails.length, address.length);
 
     excelArray.push({});
@@ -74,6 +76,7 @@ async function main() {
     if (length === 0) {
       excelArray.push({
         '№': index + 1,
+        'Название сайта': title,
         Телефон: '',
         'E-mail': '',
         Адрес: '',
@@ -84,6 +87,7 @@ async function main() {
     for (let i = 0; i < length; i++) {
       excelArray.push({
         '№': index + 1,
+        'Название сайта': title,
         Телефон: phones[i],
         'E-mail': emails[i],
         Адрес: address[i],
@@ -95,7 +99,6 @@ async function main() {
   });
 
   SaveExcel(excelArray);
-  */
 
   pressAnyKey();
 }
@@ -158,11 +161,22 @@ function pressAnyKey() {
 }
 
 /**
- * Функция получает телефоны c html с тега
+ * Функция получает заголовок сайта c html с тега <title></title>
+ * @param {*} soup 
+ * @returns string
+ */
+function getTitle(soup = new jssoup('')) {
+  const titleTag = soup.find('title');
+  const titleText = titleTag?.text?.trim();
+  return titleText;
+}
+
+/**
+ * Функция получает телефон c html с тега
  *
  * < a href="tel:+112223334455" > < /a >
  * @param {*} soup
- * @returns
+ * @returns string
  */
 function getPhones(soup = new jssoup('')) {
   const aArray = soup.findAll('a');
@@ -182,11 +196,11 @@ function getPhones(soup = new jssoup('')) {
 }
 
 /**
- * Функция получает электронные почты c html с тега
+ * Функция получает электронную почту c html с тега
  *
  * < a href="mailto:user@example.com" >< /a >
  * @param {*} soup
- * @returns
+ * @returns string
  */
 function getEmails(soup = new jssoup('')) {
   const aArray = soup.findAll('a');
@@ -220,7 +234,8 @@ function getAddress(html = '') {
   if (match) {
     match.forEach((element) => {
       const soup = new jssoup(element);
-      const address = soup.text;
+      const address = soup?.text?.trim();
+      if (address.length > 1000) return;
       arr.push(address);
     });
   }
@@ -237,6 +252,16 @@ function getAddress(html = '') {
   }
 
   return arr;
+}
+
+/**
+ * Функция печатает в консоль название сайта
+ * @param {*} title
+ */
+function printTitle(title = '') {
+  console.log('Название сайта:\n');
+  console.log(`\t${title}`);
+  console.log(' ');
 }
 
 /**
@@ -294,44 +319,46 @@ function getMyTsv(arr = []) {
   let csv = '';
 
   csv += '"';
-  csv += ['№', 'Телефон', 'E-mail', 'Адрес', 'Ссылка на сайт'].join('";"');
+  csv += ['№', 'Название сайта', 'Телефон', 'E-mail', 'Адрес', 'Ссылка на сайт'].join('";"');
   csv += '"\n';
 
   csv += '"';
-  csv += Array.from({ length: 5 }, () => ' ').join('";"');
+  csv += Array.from({ length: 6 }, () => ' ').join('";"');
   csv += '"\n';
 
   arr.forEach((element, index) => {
-    const { url, address, phones, emails } = element;
+    const { url, title, address, phones, emails } = element;
 
     const length = Math.max(phones.length, emails.length, address.length);
 
     if (length === 0) {
       const col1 = `${index}`;
-      const col2 = ' ';
+      const col2 = `${title}`;
       const col3 = ' ';
       const col4 = ' ';
-      const col5 = `${url}`;
+      const col5 = ' ';
+      const col6 = `${url}`;
 
       csv += '"';
-      csv += Array.from({ length: 5 }, () => ' ').join('";"');
+      csv += [col1, col2, col3, col4, col5, col6].join('";"');
       csv += '"\n';
     }
 
     for (let i = 0; i < length; i++) {
       const col1 = `${index + 1}`;
-      const col2 = phones[i] ? `${phones[i]}` : ' ';
-      const col3 = emails[i] ? `${emails[i]}` : ' ';
-      const col4 = address[i] ? `${address[i]}` : ' ';
-      const col5 = `${url}`;
+      const col2 = `${title}`;
+      const col3 = phones[i] ? `${phones[i]}` : ' ';
+      const col4 = emails[i] ? `${emails[i]}` : ' ';
+      const col5 = address[i] ? `${address[i]}` : ' ';
+      const col6 = `${url}`;
 
       csv += '"';
-      csv += [col1, col2, col3, col4, col5].join('";"');
+      csv += [col1, col2, col3, col4, col5, col6].join('";"');
       csv += '"\n';
     }
 
     csv += '"';
-    csv += Array.from({ length: 5 }, () => ' ').join('";"');
+    csv += Array.from({ length: 6 }, () => ' ').join('";"');
     csv += '"\n';
   });
 
