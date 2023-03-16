@@ -62,19 +62,21 @@ async function main() {
     console.log(' * * * * * * * * * * * * * * * *');
   }
 
+  /*
   const fileName = `_${getTime()}_СсылкаТелефонПочта.csv`;
   const csv = getMyTsv(resultArray);
   await writeFile(fileName, csv);
+  */
 
-  let excelArray = [];
+  let allDataArray = [];
   resultArray.forEach((element, index) => {
     const { url, title, phones, emails, address } = element;
     const length = Math.max(phones.length, emails.length, address.length);
 
-    excelArray.push({});
+    allDataArray.push({});
 
     if (length === 0) {
-      excelArray.push({
+      allDataArray.push({
         '№': index + 1,
         'Название сайта': title,
         Телефон: '',
@@ -85,7 +87,7 @@ async function main() {
     }
 
     for (let i = 0; i < length; i++) {
-      excelArray.push({
+      allDataArray.push({
         '№': index + 1,
         'Название сайта': title,
         Телефон: phones[i],
@@ -95,10 +97,25 @@ async function main() {
       });
     }
 
-    excelArray.push({});
+    allDataArray.push({});
   });
 
-  SaveExcel(excelArray);
+  let emailsArray = [];
+  resultArray.forEach((element, index) => {
+    const { title, emails } = element;
+    emailsArray.push({
+      '№': index + 1,
+      'Название сайт': title,
+      'Электронные почты': emails.join(),
+    });
+  });
+
+  const workbook = xlsx.utils.book_new();
+  const worksheet1 = xlsx.utils.json_to_sheet(allDataArray);
+  const worksheet2 = xlsx.utils.json_to_sheet(emailsArray);
+  xlsx.utils.book_append_sheet(workbook, worksheet1, 'ВсеДанные');
+  xlsx.utils.book_append_sheet(workbook, worksheet2, 'Почты');
+  xlsx.writeFile(workbook, `_${getTime()}_ДанныеСайтов.xlsx`);
 
   pressAnyKey();
 }
@@ -162,7 +179,7 @@ function pressAnyKey() {
 
 /**
  * Функция получает заголовок сайта c html с тега <title></title>
- * @param {*} soup 
+ * @param {*} soup
  * @returns string
  */
 function getTitle(soup = new jssoup('')) {
@@ -319,7 +336,14 @@ function getMyTsv(arr = []) {
   let csv = '';
 
   csv += '"';
-  csv += ['№', 'Название сайта', 'Телефон', 'E-mail', 'Адрес', 'Ссылка на сайт'].join('";"');
+  csv += [
+    '№',
+    'Название сайта',
+    'Телефон',
+    'E-mail',
+    'Адрес',
+    'Ссылка на сайт',
+  ].join('";"');
   csv += '"\n';
 
   csv += '"';
@@ -410,23 +434,3 @@ const makeRequest = async (url) => {
       });
   });
 };
-
-function SaveExcel(
-  arrayDict = [
-    { name: 'John Doe', age: 30, city: 'New York' },
-    { name: 'Jane Smith', age: 25, city: 'Los Angeles' },
-    { name: 'Bob Johnson', age: 40, city: 'Chicago' },
-  ]
-) {
-  // Создание нового файла
-  const workbook = xlsx.utils.book_new();
-
-  // Создание нового листа
-  const worksheet = xlsx.utils.json_to_sheet(arrayDict);
-
-  // Добавление листа в книгу
-  xlsx.utils.book_append_sheet(workbook, worksheet, 'list');
-
-  // Запись книги в файл
-  xlsx.writeFile(workbook, `_${getTime()}_СсылкаТелефонПочта.xlsx`);
-}
