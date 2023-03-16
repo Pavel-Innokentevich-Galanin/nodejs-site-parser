@@ -1,13 +1,14 @@
 const fs = require('fs');
-const axios = require('axios');
+const https = require('https');
 const jssoup = require('jssoup').default;
 const prompt = require('prompt-sync')({ sigint: true });
 
 async function main() {
   const isFileExists = await fileExists('urls.txt');
   if (!isFileExists) {
-    console.log('Нет файла url.txt');
-    console.log('В файл url.txt нужно вставить ссылки');
+    console.log('Создайте файл url.txt');
+    pressAnyKey();
+    return;
   }
 
   const text = await readFileAsync('urls.txt');
@@ -30,8 +31,7 @@ async function main() {
   for (let i = 0; i < arr.length; i++) {
     try {
       const url = arr[i];
-      const response = await axios.get(url);
-      const html = response.data;
+      const html = await makeRequest(url);
       const soup = new jssoup(html);
 
       const phones = getPhones(soup);
@@ -103,9 +103,9 @@ async function fileExists(path) {
 async function writeFile(filename, data) {
   try {
     await fs.promises.writeFile(filename, data);
-    console.log(`Data has been written to ${filename}`);
+    console.log(`Данные записаны в файл ${filename}`);
   } catch (error) {
-    console.error(`Failed to write data to ${filename}: ${error.message}`);
+    console.error(`Данные не записались в файл ${filename}: ${error.message}`);
   }
 }
 
@@ -265,8 +265,26 @@ function getTime(d = new Date()) {
   let mi = d.getMinutes();
   mi = mi < 10 ? `0${mi}` : `${mi}`;
 
-  let ms = d.getMilliseconds();
+  let ms = d.getSeconds();
   ms = ms < 10 ? `0${ms}` : `${ms}`;
 
   return `${ye}-${mo}-${da}_${ho}-${mi}-${ms}`;
 }
+
+const makeRequest = async (url) => {
+  return new Promise((resolve, reject) => {
+    https.get(url, (response) => {
+      let data = '';
+
+      response.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      response.on('end', () => {
+        resolve(data);
+      });
+    }).on('error', (error) => {
+      reject(error);
+    });
+  });
+};
