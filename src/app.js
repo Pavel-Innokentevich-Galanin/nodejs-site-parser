@@ -1,4 +1,5 @@
 const fs = require('fs');
+const xlsx = require('xlsx');
 const https = require('https');
 const jssoup = require('jssoup').default;
 const prompt = require('prompt-sync')({ sigint: true });
@@ -36,16 +37,19 @@ async function main() {
 
       const phones = getPhones(soup);
       const emails = getEmails(soup);
+      const address = getAddress(html);
 
       console.log(' * * * * * * * * * * * * * * * *');
       printUrl(url);
       printPhones(phones);
       printEmails(emails);
+      printAddress(address);
 
       resultArray.push({
         url,
         phones,
         emails,
+        address,
       });
     } catch (err) {
       console.log(' < < < < < < < < err');
@@ -58,6 +62,40 @@ async function main() {
   const fileName = `_${getTime()}_СсылкаТелефонПочта.csv`;
   const csv = getMyTsv(resultArray);
   await writeFile(fileName, csv);
+
+  /*
+  let excelArray = [];
+  resultArray.forEach((element, index) => {
+    const { url, phones, emails, address } = element;
+    const length = Math.max(phones.length, emails.length, address.length);
+
+    excelArray.push({});
+
+    if (length === 0) {
+      excelArray.push({
+        '№': index + 1,
+        Телефон: '',
+        'E-mail': '',
+        Адрес: '',
+        'Ссылка на сайт': url,
+      });
+    }
+
+    for (let i = 0; i < length; i++) {
+      excelArray.push({
+        '№': index + 1,
+        Телефон: phones[i],
+        'E-mail': emails[i],
+        Адрес: address[i],
+        'Ссылка на сайт': url,
+      });
+    }
+
+    excelArray.push({});
+  });
+
+  SaveExcel(excelArray);
+  */
 
   pressAnyKey();
 }
@@ -97,8 +135,8 @@ async function fileExists(path) {
 
 /**
  * Функция записывает в файл по пути filename содержимое строки data
- * @param {string} filename 
- * @param {string} data 
+ * @param {string} filename
+ * @param {string} data
  */
 async function writeFile(filename, data) {
   try {
@@ -121,10 +159,10 @@ function pressAnyKey() {
 
 /**
  * Функция получает телефоны c html с тега
- * 
+ *
  * < a href="tel:+112223334455" > < /a >
- * @param {*} soup 
- * @returns 
+ * @param {*} soup
+ * @returns
  */
 function getPhones(soup = new jssoup('')) {
   const aArray = soup.findAll('a');
@@ -145,10 +183,10 @@ function getPhones(soup = new jssoup('')) {
 
 /**
  * Функция получает электронные почты c html с тега
- * 
+ *
  * < a href="mailto:user@example.com" >< /a >
- * @param {*} soup 
- * @returns 
+ * @param {*} soup
+ * @returns
  */
 function getEmails(soup = new jssoup('')) {
   const aArray = soup.findAll('a');
@@ -168,21 +206,55 @@ function getEmails(soup = new jssoup('')) {
 }
 
 /**
+ * Функция получает адрес
+ * @param {*} html
+ * @returns
+ */
+function getAddress(html = '') {
+  let arr = [];
+
+  const addressRegex = /<.*.?ул\..?.*>/g;
+
+  const match = html.match(addressRegex);
+
+  if (match) {
+    match.forEach((element) => {
+      const soup = new jssoup(element);
+      const address = soup.text;
+      arr.push(address);
+    });
+  }
+
+  const soup = new jssoup(html);
+
+  const adderessTags = soup.findAll('address');
+  adderessTags.forEach((element) => {
+    arr.push(element?.text?.trim());
+  });
+
+  if (arr.length === 0) {
+    return ['Адрес не найден'];
+  }
+
+  return arr;
+}
+
+/**
  * Функция печатает в консоль url
- * @param {*} url 
+ * @param {*} url
  */
 function printUrl(url = '') {
-  console.log('\tСсылка:\n');
+  console.log('Ссылка:\n');
   console.log(`\t${url}`);
   console.log(' ');
 }
 
 /**
  * Функция печатает в консоль телефоны
- * @param {*} arr 
+ * @param {*} arr
  */
 function printPhones(arr = []) {
-  console.log('\tТелефоны:\n');
+  console.log('Телефоны:\n');
   arr.forEach((element) => {
     console.log(`\t${element}`);
   });
@@ -191,10 +263,22 @@ function printPhones(arr = []) {
 
 /**
  * Функция печатает в консоль электронные почты
- * @param {*} arr 
+ * @param {*} arr
  */
 function printEmails(arr = []) {
-  console.log('\tЭлектронные почты:\n');
+  console.log('Электронные почты:\n');
+  arr.forEach((element) => {
+    console.log(`\t${element}`);
+  });
+  console.log(' ');
+}
+
+/**
+ * Функция печатает в консоль адрес
+ * @param {*} address
+ */
+function printAddress(arr) {
+  console.log('Адреса:\n');
   arr.forEach((element) => {
     console.log(`\t${element}`);
   });
@@ -203,43 +287,52 @@ function printEmails(arr = []) {
 
 /**
  * Функция ненерирует текст файла csv
- * @param {*} arr 
+ * @param {*} arr
  * @returns string
  */
 function getMyTsv(arr = []) {
   let csv = '';
 
-  csv += ['№', 'Ссылка', 'Телефон', 'Email'].join('\t');
-  csv += '\n';
+  csv += '"';
+  csv += ['№', 'Телефон', 'E-mail', 'Адрес', 'Ссылка на сайт'].join('";"');
+  csv += '"\n';
 
-  csv += ['x', 'x', 'x', 'x'].join('\t');
-  csv += '\n';
+  csv += '"';
+  csv += Array.from({ length: 5 }, () => ' ').join('";"');
+  csv += '"\n';
 
   arr.forEach((element, index) => {
-    const { url, phones, emails } = element;
+    const { url, address, phones, emails } = element;
 
-    const length = Math.max(phones.length, emails.length);
+    const length = Math.max(phones.length, emails.length, address.length);
 
     if (length === 0) {
       const col1 = `${index}`;
-      const col2 = `${url}`;
+      const col2 = ' ';
       const col3 = ' ';
       const col4 = ' ';
-      csv += [col1, col2, col3, col4].join('\t');
-      csv += '\n';
+      const col5 = `${url}`;
+
+      csv += '"';
+      csv += Array.from({ length: 5 }, () => ' ').join('";"');
+      csv += '"\n';
     }
 
     for (let i = 0; i < length; i++) {
-      const col1 = `${index}`;
-      const col2 = `${url}`;
-      const col3 = phones[i] ? `${phones[i]}` : ' ';
-      const col4 = emails[i] ? `${emails[i]}` : ' ';
-      csv += [col1, col2, col3, col4].join('\t');
-      csv += '\n';
+      const col1 = `${index + 1}`;
+      const col2 = phones[i] ? `${phones[i]}` : ' ';
+      const col3 = emails[i] ? `${emails[i]}` : ' ';
+      const col4 = address[i] ? `${address[i]}` : ' ';
+      const col5 = `${url}`;
+
+      csv += '"';
+      csv += [col1, col2, col3, col4, col5].join('";"');
+      csv += '"\n';
     }
 
-    csv += ['x', 'x', 'x', 'x'].join('\t');
-    csv += '\n';
+    csv += '"';
+    csv += Array.from({ length: 5 }, () => ' ').join('";"');
+    csv += '"\n';
   });
 
   return csv;
@@ -247,7 +340,7 @@ function getMyTsv(arr = []) {
 
 /**
  * Функция получает дату в формета 'YY-MM-DD_hh-mm-ss'
- * @param {*} d 
+ * @param {*} d
  * @returns 'YY-MM-DD_hh-mm-ss'
  */
 function getTime(d = new Date()) {
@@ -273,18 +366,40 @@ function getTime(d = new Date()) {
 
 const makeRequest = async (url) => {
   return new Promise((resolve, reject) => {
-    https.get(url, (response) => {
-      let data = '';
+    https
+      .get(url, (response) => {
+        let data = '';
 
-      response.on('data', (chunk) => {
-        data += chunk;
-      });
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
 
-      response.on('end', () => {
-        resolve(data);
+        response.on('end', () => {
+          resolve(data);
+        });
+      })
+      .on('error', (error) => {
+        reject(error);
       });
-    }).on('error', (error) => {
-      reject(error);
-    });
   });
 };
+
+function SaveExcel(
+  arrayDict = [
+    { name: 'John Doe', age: 30, city: 'New York' },
+    { name: 'Jane Smith', age: 25, city: 'Los Angeles' },
+    { name: 'Bob Johnson', age: 40, city: 'Chicago' },
+  ]
+) {
+  // Создание нового файла
+  const workbook = xlsx.utils.book_new();
+
+  // Создание нового листа
+  const worksheet = xlsx.utils.json_to_sheet(arrayDict);
+
+  // Добавление листа в книгу
+  xlsx.utils.book_append_sheet(workbook, worksheet, 'list');
+
+  // Запись книги в файл
+  xlsx.writeFile(workbook, `_${getTime()}_СсылкаТелефонПочта.xlsx`);
+}

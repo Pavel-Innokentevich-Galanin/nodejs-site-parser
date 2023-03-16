@@ -4,3 +4,5 @@ node_modules
 *.txt
 *.csv
 *.csv#
+*.xlsx
+*.xlsx#
