@@ -5,26 +5,26 @@ const jssoup = require('jssoup').default;
 const myPrompt = require('prompt-sync')({ sigint: true });
 
 interface allDataListDto {
-    '№'?: number,
-    'Название сайта'?: string;
-    'Телефон'?: string;
-    'E-mail'?: string;
-    'Адрес'?: string;
-    'Ссылка на сайт'?: string;
+  '№'?: number;
+  'Название сайта'?: string;
+  Телефон?: string;
+  'E-mail'?: string;
+  Адрес?: string;
+  'Ссылка на сайт'?: string;
 }
 
 interface allDataListEnglishDto {
-    'title': string;
-    'phones': string[];
-    'emails': string[];
-    'address': string[];
-    'url': string;
+  title: string;
+  phones: string[];
+  emails: string[];
+  address: string[];
+  url: string;
 }
 
 interface emailsListDto {
-    '№': number;
-    'Название сайт': string;
-    'Электронные почты': string;
+  '№': number;
+  'Название сайта': string;
+  'Электронные почты': string;
 }
 
 async function main() {
@@ -55,7 +55,7 @@ async function main() {
   for (let i = 0; i < url_array.length; i++) {
     try {
       const url = url_array[i];
-      const html: string = await makeRequest(url) as string;
+      const html: string = (await makeRequest(url)) as string;
       const soup = new jssoup(html);
 
       const title = getTitle(soup);
@@ -128,7 +128,7 @@ async function main() {
     const { title, emails } = element;
     emailsArray.push({
       '№': index + 1,
-      'Название сайт': title,
+      'Название сайта': title,
       'Электронные почты': emails.join(),
     });
   });
@@ -456,4 +456,4 @@ async function makeRequest(url: string) {
         reject(error);
       });
   });
-};
+}
