@@ -4,8 +4,17 @@
     "prompt-sync": "^4.2.0",
     "xlsx": "^0.18.5"
   },
+  "devDependencies": {
+    "@types/node": "^18.15.3",
+    "nodemon": "^2.0.21",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.2"
+  },
   "scripts": {
-    "start": "node src/app.js",
-    "build": "pkg src/app.js --out-path build"
+    "start": "node dist/app.js",
+    "dev": "nodemon src/app.ts",
+    "tsc-build": "tsc",
+    "pkg-build": "pkg dist/app.js --out-path build",
+    "build": "yarn tsc-build && yarn pkg-build"
   }
 }

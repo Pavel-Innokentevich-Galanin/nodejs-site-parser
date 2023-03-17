@@ -2,7 +2,30 @@ const fs = require('fs');
 const xlsx = require('xlsx');
 const https = require('https');
 const jssoup = require('jssoup').default;
-const prompt = require('prompt-sync')({ sigint: true });
+const myPrompt = require('prompt-sync')({ sigint: true });
+
+interface allDataListDto {
+    '№'?: number,
+    'Название сайта'?: string;
+    'Телефон'?: string;
+    'E-mail'?: string;
+    'Адрес'?: string;
+    'Ссылка на сайт'?: string;
+}
+
+interface allDataListEnglishDto {
+    'title': string;
+    'phones': string[];
+    'emails': string[];
+    'address': string[];
+    'url': string;
+}
+
+interface emailsListDto {
+    '№': number;
+    'Название сайт': string;
+    'Электронные почты': string;
+}
 
 async function main() {
   const isFileExists = await fileExists('urls.txt');
@@ -13,26 +36,26 @@ async function main() {
   }
 
   const text = await readFileAsync('urls.txt');
-  const array = text.split(/\s/);
+  const URL_ARRAY = text.split(/\s/);
 
-  let arr = [];
+  let url_array: string[] = [];
 
-  array.forEach((element) => {
+  URL_ARRAY.forEach((element: string) => {
     if (element.length === 0) return;
-    arr.push(element);
+    url_array.push(element);
   });
 
-  if (arr.length === 0) {
+  if (url_array.length === 0) {
     console.log('В файле urls.txt нет ссылок');
     pressAnyKey();
     return;
   }
 
   let resultArray = [];
-  for (let i = 0; i < arr.length; i++) {
+  for (let i = 0; i < url_array.length; i++) {
     try {
-      const url = arr[i];
-      const html = await makeRequest(url);
+      const url = url_array[i];
+      const html: string = await makeRequest(url) as string;
       const soup = new jssoup(html);
 
       const title = getTitle(soup);
@@ -68,7 +91,7 @@ async function main() {
   await writeFile(fileName, csv);
   */
 
-  let allDataArray = [];
+  let allDataArray: allDataListDto[] = [];
   resultArray.forEach((element, index) => {
     const { url, title, phones, emails, address } = element;
     const length = Math.max(phones.length, emails.length, address.length);
@@ -100,7 +123,7 @@ async function main() {
     allDataArray.push({});
   });
 
-  let emailsArray = [];
+  let emailsArray: emailsListDto[] = [];
   resultArray.forEach((element, index) => {
     const { title, emails } = element;
     emailsArray.push({
@@ -127,7 +150,7 @@ main();
  * @param {string} filepath
  * @returns string
  */
-async function readFileAsync(filepath) {
+async function readFileAsync(filepath: string) {
   try {
     const data = await fs.promises.readFile(filepath, 'utf-8');
     return data;
@@ -143,11 +166,11 @@ async function readFileAsync(filepath) {
  * @param {*} path
  * @returns boolean
  */
-async function fileExists(path) {
+async function fileExists(path: string) {
   try {
     await fs.promises.access(path);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     if (error.code === 'ENOENT') return false;
     throw error;
   }
@@ -158,11 +181,11 @@ async function fileExists(path) {
  * @param {string} filename
  * @param {string} data
  */
-async function writeFile(filename, data) {
+async function writeFile(filename: string, data: string) {
   try {
     await fs.promises.writeFile(filename, data);
     console.log(`Данные записаны в файл ${filename}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Данные не записались в файл ${filename}: ${error.message}`);
   }
 }
@@ -174,7 +197,7 @@ async function writeFile(filename, data) {
  */
 function pressAnyKey() {
   console.log(' ');
-  prompt('Для завершения программы нажмите Enter... ');
+  myPrompt('Для завершения программы нажмите Enter... ');
 }
 
 /**
@@ -182,9 +205,9 @@ function pressAnyKey() {
  * @param {*} soup
  * @returns string
  */
-function getTitle(soup = new jssoup('')) {
+function getTitle(soup = new jssoup('')): string {
   const titleTag = soup.find('title');
-  const titleText = titleTag?.text?.trim();
+  const titleText: string = titleTag?.text?.trim();
   return titleText;
 }
 
@@ -195,12 +218,12 @@ function getTitle(soup = new jssoup('')) {
  * @param {*} soup
  * @returns string
  */
-function getPhones(soup = new jssoup('')) {
+function getPhones(soup = new jssoup('')): string[] {
   const aArray = soup.findAll('a');
 
-  let arr = [];
+  let arr: string[] = [];
 
-  aArray.forEach((element) => {
+  aArray.forEach((element: any) => {
     const href = element?.attrs?.href || '';
     if (href.length === 0) return;
     if (!href.startsWith('tel:')) return;
@@ -219,12 +242,12 @@ function getPhones(soup = new jssoup('')) {
  * @param {*} soup
  * @returns string
  */
-function getEmails(soup = new jssoup('')) {
+function getEmails(soup = new jssoup('')): string[] {
   const aArray = soup.findAll('a');
 
-  let arr = [];
+  let arr: string[] = [];
 
-  aArray.forEach((element) => {
+  aArray.forEach((element: any) => {
     const href = element?.attrs?.href || '';
     if (href.length === 0) return;
     if (!href.startsWith('mailto:')) return;
@@ -241,8 +264,8 @@ function getEmails(soup = new jssoup('')) {
  * @param {*} html
  * @returns
  */
-function getAddress(html = '') {
-  let arr = [];
+function getAddress(html = ''): string[] {
+  let arr: string[] = [];
 
   const addressRegex = /<.*.?ул\..?.*>/g;
 
@@ -260,7 +283,7 @@ function getAddress(html = '') {
   const soup = new jssoup(html);
 
   const adderessTags = soup.findAll('address');
-  adderessTags.forEach((element) => {
+  adderessTags.forEach((element: any) => {
     arr.push(element?.text?.trim());
   });
 
@@ -275,7 +298,7 @@ function getAddress(html = '') {
  * Функция печатает в консоль название сайта
  * @param {*} title
  */
-function printTitle(title = '') {
+function printTitle(title: string) {
   console.log('Название сайта:\n');
   console.log(`\t${title}`);
   console.log(' ');
@@ -285,7 +308,7 @@ function printTitle(title = '') {
  * Функция печатает в консоль url
  * @param {*} url
  */
-function printUrl(url = '') {
+function printUrl(url: string) {
   console.log('Ссылка:\n');
   console.log(`\t${url}`);
   console.log(' ');
@@ -295,7 +318,7 @@ function printUrl(url = '') {
  * Функция печатает в консоль телефоны
  * @param {*} arr
  */
-function printPhones(arr = []) {
+function printPhones(arr: string[]) {
   console.log('Телефоны:\n');
   arr.forEach((element) => {
     console.log(`\t${element}`);
@@ -307,7 +330,7 @@ function printPhones(arr = []) {
  * Функция печатает в консоль электронные почты
  * @param {*} arr
  */
-function printEmails(arr = []) {
+function printEmails(arr: string[]) {
   console.log('Электронные почты:\n');
   arr.forEach((element) => {
     console.log(`\t${element}`);
@@ -319,7 +342,7 @@ function printEmails(arr = []) {
  * Функция печатает в консоль адрес
  * @param {*} address
  */
-function printAddress(arr) {
+function printAddress(arr: string[]) {
   console.log('Адреса:\n');
   arr.forEach((element) => {
     console.log(`\t${element}`);
@@ -350,7 +373,7 @@ function getMyTsv(arr = []) {
   csv += Array.from({ length: 6 }, () => ' ').join('";"');
   csv += '"\n';
 
-  arr.forEach((element, index) => {
+  arr.forEach((element: allDataListEnglishDto, index) => {
     const { url, title, address, phones, emails } = element;
 
     const length = Math.max(phones.length, emails.length, address.length);
@@ -397,31 +420,31 @@ function getMyTsv(arr = []) {
 function getTime(d = new Date()) {
   const ye = d.getFullYear();
 
-  let mo = d.getMonth() + 1;
-  mo = mo < 10 ? `0${mo}` : `${mo}`;
+  const tmo = d.getMonth() + 1;
+  const mo = tmo < 10 ? `0${tmo}` : `${tmo}`;
 
-  let da = d.getDate();
-  da = da < 10 ? `0${da}` : `${da}`;
+  const tda = d.getDate();
+  const da = tda < 10 ? `0${tda}` : `${tda}`;
 
-  let ho = d.getHours();
-  ho = ho < 10 ? `0${ho}` : `${ho}`;
+  const tho = d.getHours();
+  const ho = tho < 10 ? `0${tho}` : `${tho}`;
 
-  let mi = d.getMinutes();
-  mi = mi < 10 ? `0${mi}` : `${mi}`;
+  const tmi = d.getMinutes();
+  const mi = tmi < 10 ? `0${tmi}` : `${tmi}`;
 
-  let ms = d.getSeconds();
-  ms = ms < 10 ? `0${ms}` : `${ms}`;
+  const tms = d.getSeconds();
+  const ms = tms < 10 ? `0${tms}` : `${tms}`;
 
   return `${ye}-${mo}-${da}_${ho}-${mi}-${ms}`;
 }
 
-const makeRequest = async (url) => {
+async function makeRequest(url: string) {
   return new Promise((resolve, reject) => {
     https
-      .get(url, (response) => {
+      .get(url, (response: any) => {
         let data = '';
 
-        response.on('data', (chunk) => {
+        response.on('data', (chunk: any) => {
           data += chunk;
         });
 
@@ -429,7 +452,7 @@ const makeRequest = async (url) => {
           resolve(data);
         });
       })
-      .on('error', (error) => {
+      .on('error', (error: any) => {
         reject(error);
       });
   });
